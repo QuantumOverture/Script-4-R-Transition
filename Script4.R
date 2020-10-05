@@ -1,5 +1,5 @@
 require("TDA")
-
+setwd("C:/Users/ismai/Desktop/Script4Update/Research/TAaCGH")
 # Command Line Arguements
 args <- commandArgs()
 dataSet <- "horlings" #args[4]
@@ -19,7 +19,7 @@ action <- "sect" #args[8]
 #################IMPORTANT INTERNAL FUNCTIONS#######################
 
 build_individual_profile <- function(CGHdata , patient , start , finish){
-  tProfile <- CGHdata[patient,start:(finish + 1)]
+  tProfile <- CGHdata[patient,(start+1):(finish + 1)]
   return(tProfile)
 }
 
@@ -31,7 +31,12 @@ build_cloud <- function(CGHprofile , dim){
     # Have as many coordinates as dimensions
     for(j in 1:dim){
         # This ensures proper wraparound.
-        tempPoint <- c( tempPoint,round(as.numeric(CGHprofile[ 1,(i+j) %% ncol(CGHprofile) +1 ]),digits=6) )
+        if(i+j-1 <= ncol(CGHprofile)){
+          tempPoint <- c( tempPoint,round(as.numeric(CGHprofile[ 1,(i+j-1)]),digits=6) )
+        }else{
+          tempPoint <- c( tempPoint,round(as.numeric(CGHprofile[ 1,( (i+j-1) %% ncol(CGHprofile) )]),digits=6) )
+        }
+      #tempPoint <- c( tempPoint,round(as.numeric(CGHprofile[ 1,( (i+j-1) %% ncol(CGHprofile) )]),digits=6) )
     }
   tCloud <- rbind(tCloud,tempPoint)
   tempPoint <- c()
@@ -84,13 +89,20 @@ for(i in 1:nrow(dictList)){
     
     Diag <- ripsDiag(X = cloud, maxdimension = MaxDIM, maxscale =MaxSCA,
                      library = "Dionysus", printProgress = TRUE)
+    
+    
+    BarCode <- Diag[[1]]
+    
+    # Start for betti 0
+    Start <- 0
+    # Make sure cloud graph is working properly
+    
+    
   }
 }
 
-plot(Diag[["diagram"]])
 
 
-}
 
 
 
