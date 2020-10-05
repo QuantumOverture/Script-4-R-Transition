@@ -1,11 +1,17 @@
 # Barcode To Jag Files Conversion Algorithm
 
 1. Run homology and get life and death values.
+<br>
  dimension     Birth      Death
+      <br>
       0 0.0000000 0.30000000
+      <br>
       0 0.0000000 0.12601158
+      <br>
       0 0.0000000 0.12454177
+      <br>
       .....
+      <br>
       1 0.2668731 0.28484301
 
 2.    Get epsilon interval/step value. Start with 0 and then add that to take steps.
