@@ -1,4 +1,5 @@
 require("TDA")
+options(scipen=999)
 setwd("C:/Users/ismai/Desktop/Script4Update/Research/TAaCGH")
 # Command Line Arguements
 args <- commandArgs()
@@ -8,6 +9,8 @@ partNum <- 101 #as.numeric(args[6])
 epsIncr <- 0.01 #round(as.numeric(args[7]), 3)
 action <- "sect" #args[8]
 
+
+decimalSpotsOfIncr <- nchar(strsplit(as.character(epsIncr),"[.]")[[1]][2])
 
 #### TO DO LIST ####
 
@@ -45,7 +48,53 @@ build_cloud <- function(CGHprofile , dim){
 return(tCloud)
 }
 
+ClearAndSortBarCode <- function(BarCode,EpsLimit){
+  Result <- c()#data.frame("Dimension"=c(1),"Birth"=c(),"Death"=c("-"))
+  Dim0 <- c()
+  Dim1 <- data.frame("Dimension"=c(1),"Birth"=c(1),"Death"=c(1))
+  for(Row in 1:nrow(BarCode)){
 
+    Dimension = as.numeric(BarCode[Row,"dimension"])
+    Birth = round(as.numeric(BarCode[Row,"Birth"]),decimalSpotsOfIncr)
+    Death = round(as.numeric(BarCode[Row,"Death"]),decimalSpotsOfIncr)
+    if(Birth != Death){
+      if(Dimension == 1){
+        Dim1<- rbind(Dim1,c(Dimension,Birth,Death))
+
+      }else{
+        Dim0 <- c(Dim0,Death)
+      }
+      
+    }
+  
+  }
+  
+  
+  Dim1 <- Dim1[-1,]
+  if(nrow(Dim1)>1){
+  Dim1$"Birth" <- as.numeric(as.character(Dim1$"Birth"))
+  Dim1 <- Dim1[order(Dim1$"Birth"),]
+  }
+  Dim0 <- sort(Dim0)
+  
+  # Betti 0 first
+  for(num in Dim0){
+    if(num != EpsLimit){
+      Result <- rbind(Result,c(0,0,epsIncr * ceiling(num/epsIncr)))
+    }else{
+      Result <- rbind(Result,c(0,0,"inf"))
+    }
+  }
+  # Betti 1 second
+  if(nrow(Dim1)>1){
+    for(row in 1:nrow(Dim1)){
+      print("!")
+      Result <- rbind(Result,c(1,Dim1[row,2],epsIncr * ceiling(Dim1[row,3]/epsIncr)))
+    }
+  }
+  
+  return(Result)
+}
 ####################################################################
 
 # Setup correct file paths
@@ -84,7 +133,7 @@ for(i in 1:nrow(dictList)){
     profile = build_individual_profile(inputList,j,beg,end)
     cloud = build_cloud(profile, cloudDim)
     MaxDIM = 1 # 1 = Loops/holes
-    MaxSCA = 0.3 #  
+    MaxSCA = 100 #  
     
     
     Diag <- ripsDiag(X = cloud, maxdimension = MaxDIM, maxscale =MaxSCA,
@@ -92,11 +141,12 @@ for(i in 1:nrow(dictList)){
     
     
     BarCode <- Diag[[1]]
-    
+
+    ClearedAndSortedBarCode <- ClearAndSortBarCode(BarCode,MaxSCA)
     # Start for betti 0
+    print(ClearedAndSortedBarCode)
     Start <- 0
     # Make sure cloud graph is working properly
-    
     
   }
 }
