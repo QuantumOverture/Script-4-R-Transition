@@ -1,4 +1,5 @@
 require("TDA")
+require("stringr")
 options(scipen=999)
 setwd("C:/Users/ismai/Desktop/Script4Update/Research/TAaCGH")
 # Command Line Arguements
@@ -48,15 +49,19 @@ build_cloud <- function(CGHprofile , dim){
 return(tCloud)
 }
 
-ClearAndSortBarCode <- function(BarCode,EpsLimit){
+# Start here
+
+
+
+ClearAndSortBarCode <- function(BarCode,EpsLimit,epsIncr){
   Result <- c()#data.frame("Dimension"=c(1),"Birth"=c(),"Death"=c("-"))
   Dim0 <- c()
   Dim1 <- data.frame("Dimension"=c(1),"Birth"=c(1),"Death"=c(1))
   for(Row in 1:nrow(BarCode)){
 
     Dimension = as.numeric(BarCode[Row,"dimension"])
-    Birth = round(as.numeric(BarCode[Row,"Birth"]),decimalSpotsOfIncr)
-    Death = round(as.numeric(BarCode[Row,"Death"]),decimalSpotsOfIncr)
+    Birth = trunc(as.numeric(BarCode[Row,"Birth"])*10^decimalSpotsOfIncr)/10^decimalSpotsOfIncr
+    Death = trunc(as.numeric(BarCode[Row,"Death"])*10^decimalSpotsOfIncr)/10^decimalSpotsOfIncr
     if(Birth != Death){
       if(Dimension == 1){
         Dim1<- rbind(Dim1,c(Dimension,Birth,Death))
@@ -77,24 +82,119 @@ ClearAndSortBarCode <- function(BarCode,EpsLimit){
   }
   Dim0 <- sort(Dim0)
   
+  # Set to correct Interval
+  Interval = 1
+  for(Index in 1:(length(Dim0)-1)){
+    if(Dim0[Index] <= (Interval * epsIncr)){
+      Dim0[Index] = Interval * epsIncr 
+    }else{
+      while(Dim0[Index] > (Interval * epsIncr)){
+        Interval = Interval + 1
+      }
+      Dim0[Index] = Interval * epsIncr 
+    }
+  }
+  
+  if(nrow(Dim1) !=  0){
+  Interval = 1
+  for(row in 1:nrow(Dim1)){
+    if(Dim1[row,2] <= (Interval * epsIncr)){
+      Dim1[row,2] = Interval * epsIncr 
+    }else{
+      while(Dim1[row,2] > (Interval * epsIncr)){
+        Interval = Interval + 1
+      }
+      Dim1[row,2] = Interval * epsIncr 
+    }
+  }
+  
+  Interval = 1
+  for(row in 1:nrow(Dim1)){
+    if(Dim1[row,3] <= (Interval * epsIncr)){
+      Dim1[row,3] = Interval * epsIncr 
+    }else{
+      while(Dim1[row,3] > (Interval * epsIncr)){
+        Interval = Interval + 1
+      }
+      Dim1[row,3] = Interval * epsIncr 
+    }
+  }
+  }
   # Betti 0 first
   for(num in Dim0){
     if(num != EpsLimit){
-      Result <- rbind(Result,c(0,0,epsIncr * ceiling(num/epsIncr)))
+      Result <- rbind(Result,c(0,0,num))
     }else{
       Result <- rbind(Result,c(0,0,"inf"))
     }
   }
+  
+  
+  
   # Betti 1 second
   if(nrow(Dim1)>1){
     for(row in 1:nrow(Dim1)){
-      print("!")
-      Result <- rbind(Result,c(1,Dim1[row,2],epsIncr * ceiling(Dim1[row,3]/epsIncr)))
+      Result <- rbind(Result,c(1,Dim1[row,2],Dim1[row,3]))
     }
   }
   
   return(Result)
 }
+
+
+# Assuming Result ==> Betti Chunk Of BarCode
+CreateJagLine <- function(Result, Betti){
+  # Count Betti 0
+  TempVal = "0"
+  NumOfBetti0 = 1
+  while(TempVal != "1" && NumOfBetti0 <= nrow(Result)){
+    TempVal = Result[NumOfBetti0,1]
+    NumOfBetti0 = NumOfBetti0 + 1
+  }
+  # Takes care of inf and while loop offset
+  NumOfBetti0 = NumOfBetti0 - 1
+  LocOFBetti0 = NumOfBetti0
+  
+  ResultString = as.character(NumOfBetti0)
+  CurrVal = Result[1,3]
+  NumOfBetti0Incre = NumOfBetti0
+  
+  for(Betti0Row in 2:NumOfBetti0Incre){
+    if(Result[Betti0Row,3] != CurrVal){
+      NumOfBetti0Incre = NumOfBetti0Incre - 1
+      ResultString = paste(ResultString,as.character(NumOfBetti0Incre),sep="\t")
+      CurrVal = Result[Betti0Row,3]
+    }else{
+      NumOfBetti0Incre = NumOfBetti0Incre - 1
+    }
+  }
+
+  # Betti 0 Result
+  print(ResultString)
+  if(NumOfBetti0 != nrow(Result)){
+    Updates = str_count(ResultString,pattern="\t") +1
+    NumOfBetti1 = 0
+    Increment = 1
+    ResultString = ""
+    while(Updates != 0){
+      for(Betti1Row in (LocOFBetti0):nrow(Result)){
+          if(Result[Betti1Row,2] == epsIncr*Increment){
+            NumOfBetti1 = NumOfBetti1 + 1
+          }
+        if(Result[Betti1Row,3] == epsIncr*Increment){
+          NumOfBetti1 = NumOfBetti1 - 1
+        }
+        
+      }
+      ResultString = paste(ResultString,as.character(NumOfBetti1),sep="\t")
+      Updates = Updates - 1
+      Increment = Increment + 1
+    }
+    print(ResultString)
+  }
+  
+}
+
 ####################################################################
 
 # Setup correct file paths
@@ -142,10 +242,10 @@ for(i in 1:nrow(dictList)){
     
     BarCode <- Diag[[1]]
 
-    ClearedAndSortedBarCode <- ClearAndSortBarCode(BarCode,MaxSCA)
+    ClearedAndSortedBarCode <- ClearAndSortBarCode(BarCode,MaxSCA,epsIncr)
     # Start for betti 0
-    print(ClearedAndSortedBarCode)
-    Start <- 0
+    
+    CreateJagLine(ClearedAndSortedBarCode)
     # Make sure cloud graph is working properly
     
   }
