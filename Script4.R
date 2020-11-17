@@ -49,6 +49,28 @@ build_cloud <- function(CGHprofile , dim){
 return(tCloud)
 }
 
+
+Maximum_Distance_Between_Points <- function(cloud, cloudDim){
+  MaxDist = -1
+  for(Row in 1:(length(cloud)/cloudDim)){
+    for(SecondRow in (Row):(length(cloud)/cloudDim)){
+      if(SecondRow == Row){
+        next
+      }
+      TempDist = 0
+      for(dim in 1:cloudDim){
+        TempDist = TempDist + (cloud[Row,dim]-cloud[SecondRow,dim])**2
+      }
+      
+      if(sqrt(TempDist) > MaxDist){
+        MaxDist = sqrt(TempDist)
+      }
+    }
+  }
+  
+  return(MaxDist)
+}
+
 # Start here
 
 
@@ -143,56 +165,33 @@ ClearAndSortBarCode <- function(BarCode,EpsLimit,epsIncr){
 
 
 # Assuming Result ==> Betti Chunk Of BarCode
-CreateJagLine <- function(Result, Betti){
+CreateJagLine <- function(Result){
   # Count Betti 0
   TempVal = "0"
   NumOfBetti0 = 1
+  Betti0List <- c()
   while(TempVal != "1" && NumOfBetti0 <= nrow(Result)){
     TempVal = Result[NumOfBetti0,1]
     NumOfBetti0 = NumOfBetti0 + 1
+    
   }
-  # Takes care of inf and while loop offset
-  NumOfBetti0 = NumOfBetti0 - 1
-  LocOFBetti0 = NumOfBetti0
   
-  ResultString = as.character(NumOfBetti0)
-  CurrVal = Result[1,3]
-  NumOfBetti0Incre = NumOfBetti0
-  
-  for(Betti0Row in 2:NumOfBetti0Incre){
-    if(Result[Betti0Row,3] != CurrVal){
-      NumOfBetti0Incre = NumOfBetti0Incre - 1
-      ResultString = paste(ResultString,as.character(NumOfBetti0Incre),sep="\t")
-      CurrVal = Result[Betti0Row,3]
+  MaxEps = as.numeric(Result[NumOfBetti0-2,3])
+  StartEps = epsIncr
+  Counts <- c(NumOfBetti0-1)
+  TotalAlive = NumOfBetti0-1
+  while(StartEps < MaxEps){
+    NumOccurence = sum(as.character(StartEps) == Result[,3])
+    if(NumOccurence > 0){
+      TotalAlive = TotalAlive - sum(as.character(StartEps) == Result[,3])
+      Counts <- c(Counts,TotalAlive)
     }else{
-      NumOfBetti0Incre = NumOfBetti0Incre - 1
+      Counts <- c(Counts,tail(Counts,n=1))
     }
+    StartEps = StartEps + epsIncr 
   }
+  Counts <- c(Counts,1)
 
-  # Betti 0 Result
-  print(ResultString)
-  if(NumOfBetti0 != nrow(Result)){
-    Updates = str_count(ResultString,pattern="\t") +1
-    NumOfBetti1 = 0
-    Increment = 1
-    ResultString = ""
-    while(Updates != 0){
-      for(Betti1Row in (LocOFBetti0):nrow(Result)){
-          if(Result[Betti1Row,2] == epsIncr*Increment){
-            NumOfBetti1 = NumOfBetti1 + 1
-          }
-        if(Result[Betti1Row,3] == epsIncr*Increment){
-          NumOfBetti1 = NumOfBetti1 - 1
-        }
-        
-      }
-      ResultString = paste(ResultString,as.character(NumOfBetti1),sep="\t")
-      Updates = Updates - 1
-      Increment = Increment + 1
-    }
-    print(ResultString)
-  }
-  
 }
 
 ####################################################################
@@ -232,6 +231,8 @@ for(i in 1:nrow(dictList)){
   for(j in 1:nrow(inputList)){
     profile = build_individual_profile(inputList,j,beg,end)
     cloud = build_cloud(profile, cloudDim)
+    
+    MaxDist = Maximum_Distance_Between_Points(cloud, cloudDim) * 0.9
     MaxDIM = 1 # 1 = Loops/holes
     MaxSCA = 100 #  
     
