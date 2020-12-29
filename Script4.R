@@ -7,7 +7,7 @@ args <- commandArgs()
 dataSet <- "horlings" #args[4]
 homDim <- 2 #as.numeric(args[5])
 partNum <- 101 #as.numeric(args[6])
-epsIncr <- 0.01 #round(as.numeric(args[7]), 3)
+epsIncr <- 0.04 #round(as.numeric(args[7]), 3)
 action <- "sect" #args[8]
 
 
@@ -71,128 +71,67 @@ Maximum_Distance_Between_Points <- function(cloud, cloudDim){
   return(MaxDist)
 }
 
-# Start here
-
-
-
-ClearAndSortBarCode <- function(BarCode,EpsLimit,epsIncr){
-  Result <- c()#data.frame("Dimension"=c(1),"Birth"=c(),"Death"=c("-"))
-  Dim0 <- c()
-  Dim1 <- data.frame("Dimension"=c(1),"Birth"=c(1),"Death"=c(1))
-  for(Row in 1:nrow(BarCode)){
-
-    Dimension = as.numeric(BarCode[Row,"dimension"])
-    Birth = trunc(as.numeric(BarCode[Row,"Birth"])*10^decimalSpotsOfIncr)/10^decimalSpotsOfIncr
-    Death = trunc(as.numeric(BarCode[Row,"Death"])*10^decimalSpotsOfIncr)/10^decimalSpotsOfIncr
-    if(Birth != Death){
-      if(Dimension == 1){
-        Dim1<- rbind(Dim1,c(Dimension,Birth,Death))
-
-      }else{
-        Dim0 <- c(Dim0,Death)
-      }
-      
-    }
-  
-  }
-  
-  
-  Dim1 <- Dim1[-1,]
-  if(nrow(Dim1)>1){
-  Dim1$"Birth" <- as.numeric(as.character(Dim1$"Birth"))
-  Dim1 <- Dim1[order(Dim1$"Birth"),]
-  }
-  Dim0 <- sort(Dim0)
-  
-  # Set to correct Interval
-  Interval = 1
-  for(Index in 1:(length(Dim0)-1)){
-    if(Dim0[Index] <= (Interval * epsIncr)){
-      Dim0[Index] = Interval * epsIncr 
-    }else{
-      while(Dim0[Index] > (Interval * epsIncr)){
-        Interval = Interval + 1
-      }
-      Dim0[Index] = Interval * epsIncr 
-    }
-  }
-  
-  if(nrow(Dim1) !=  0){
-  Interval = 1
-  for(row in 1:nrow(Dim1)){
-    if(Dim1[row,2] <= (Interval * epsIncr)){
-      Dim1[row,2] = Interval * epsIncr 
-    }else{
-      while(Dim1[row,2] > (Interval * epsIncr)){
-        Interval = Interval + 1
-      }
-      Dim1[row,2] = Interval * epsIncr 
-    }
-  }
-  
-  Interval = 1
-  for(row in 1:nrow(Dim1)){
-    if(Dim1[row,3] <= (Interval * epsIncr)){
-      Dim1[row,3] = Interval * epsIncr 
-    }else{
-      while(Dim1[row,3] > (Interval * epsIncr)){
-        Interval = Interval + 1
-      }
-      Dim1[row,3] = Interval * epsIncr 
-    }
-  }
-  }
-  # Betti 0 first
-  for(num in Dim0){
-    if(num != EpsLimit){
-      Result <- rbind(Result,c(0,0,num))
-    }else{
-      Result <- rbind(Result,c(0,0,"inf"))
-    }
-  }
-  
-  
-  
-  # Betti 1 second
-  if(nrow(Dim1)>1){
-    for(row in 1:nrow(Dim1)){
-      Result <- rbind(Result,c(1,Dim1[row,2],Dim1[row,3]))
-    }
-  }
-  
-  return(Result)
+TruncNum <- function(Float){
+  # Truncate number, to make it match the given increment's decimal spots
+  return(trunc(Float*(10^decimalSpotsOfIncr))/(10^decimalSpotsOfIncr))
 }
 
 
-# Assuming Result ==> Betti Chunk Of BarCode
-CreateJagLine <- function(Result){
-  # Count Betti 0
-  TempVal = "0"
-  NumOfBetti0 = 1
-  Betti0List <- c()
-  while(TempVal != "1" && NumOfBetti0 <= nrow(Result)){
-    TempVal = Result[NumOfBetti0,1]
-    NumOfBetti0 = NumOfBetti0 + 1
+############################Core Functions##########################
+
+
+
+
+FormatBarcode <- function(Barcode){
+  # Step 1 -> Truncate each Death and Birth Value after the given increment's decimal place.
+  
+  # Create two seperate data frames for each betti type
+  TempBetti0 <- data.frame("dimension" = c(),"Birth" = c(),"Death" = c(),stringsAsFactors = FALSE)
+  TempBetti1 <- data.frame("dimension" = c(),"Birth" = c(),"Death" = c(),stringsAsFactors = FALSE)
+  
+  # Iterate through original barcode and build up TempBetti0 and TempBetti1
+  for(Line in 2:dim(Barcode)[1]){
+    # Truncate numbers and add them to their respective increment groups
+    CurBirth <- ceiling(TruncNum(BarCode[Line,"Birth"][["Birth"]])/epsIncr) * epsIncr
+    CurDeath <- ceiling(TruncNum(BarCode[Line,"Death"][["Death"]])/epsIncr) * epsIncr
+    
+    # Skip if the birth and death value are the same
+    if(CurBirth == CurDeath){
+      next
+    }
+    
+    # Create temp row that will be appended to the correct data frame
+    TempRow <- data.frame("dimension" = c(BarCode[Line,"dimension"][["dimension"]]),"Birth" = c(CurBirth),"Death" =c(CurDeath))
+    
+    # Append to correct data frame
+    if(BarCode[Line,"dimension"][["dimension"]] == 0){
+      TempBetti0 <- rbind(TempBetti0, TempRow)
+    }else{
+      TempBetti1 <- rbind(TempBetti1, TempRow)
+    }
     
   }
   
-  MaxEps = as.numeric(Result[NumOfBetti0-2,3])
-  StartEps = epsIncr
-  Counts <- c(NumOfBetti0-1)
-  TotalAlive = NumOfBetti0-1
-  while(StartEps < MaxEps){
-    NumOccurence = sum(as.character(StartEps) == Result[,3])
-    if(NumOccurence > 0){
-      TotalAlive = TotalAlive - sum(as.character(StartEps) == Result[,3])
-      Counts <- c(Counts,TotalAlive)
-    }else{
-      Counts <- c(Counts,tail(Counts,n=1))
-    }
-    StartEps = StartEps + epsIncr 
+  # Step 2.a -> Sort and create new barcode 
+  
+  # Order Betti 0 data frame and add infinity/end indicator
+  TempBetti0 <- TempBetti0[order(TempBetti0$Death),]
+  TempBetti0 <- rbind(TempBetti0, data.frame("dimension" = c(0),"Birth" = c(0),"Death" =c("inf")))
+  
+  # Add and return Betti1 inclusion if Betti1 points appear duing analysis
+  if(dim(TempBetti1)[1] != 0){
+    TempBetti1 <- TempBetti1[order(TempBetti1$Birth),]
+    return(rbind(TempBetti0,TempBetti1))
   }
-  Counts <- c(Counts,1)
+
+  # otherwise return only the betti 0 data frame
+  return(TempBetti0)
+  
+  
 
 }
+
+
 
 ####################################################################
 
@@ -243,12 +182,7 @@ for(i in 1:nrow(dictList)){
     
     BarCode <- Diag[[1]]
 
-    ClearedAndSortedBarCode <- ClearAndSortBarCode(BarCode,MaxSCA,epsIncr)
-    # Start for betti 0
-    
-    CreateJagLine(ClearedAndSortedBarCode)
-    # Make sure cloud graph is working properly
-    
+    FormattedBarcode <- FormatBarcode(BarCode)
   }
 }
 
