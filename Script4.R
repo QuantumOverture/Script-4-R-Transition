@@ -7,7 +7,7 @@ args <- commandArgs()
 dataSet <- "horlings" #args[4]
 homDim <- 2 #as.numeric(args[5])
 partNum <- 101 #as.numeric(args[6])
-epsIncr <- 0.04 #round(as.numeric(args[7]), 3)
+epsIncr <- 0.01 #round(as.numeric(args[7]), 3)
 action <- "sect" #args[8]
 
 
@@ -131,7 +131,31 @@ FormatBarcode <- function(Barcode){
 
 }
 
+JagLineGenerateBetti0 <- function(FormattedBarcode, MaxDist){
+  TempEps <- epsIncr
+  Result <- c(length(FormattedBarcode$Death[FormattedBarcode$dimension == "0"]))
+  while(TempEps <MaxDist){
+    NumHitsForCurEps <- length(FormattedBarcode$Death[FormattedBarcode$Death == as.character(TempEps) && FormattedBarcode$dimension == "0"])
+    Result <- c(Result,Result[length(Result)]-NumHitsForCurEps)
+    TempEps <- TempEps + epsIncr
+  }
+  
+  return(Result)
+}
 
+JagLineGenerateBetti1 <- function(FormattedBarcode, MaxDist){
+  TempEps <- 0
+  Result <- c()
+  while(TempEps <MaxDist){
+    NumBornForCurEps <- length(FormattedBarcode$Birth[FormattedBarcode$Birth == as.character(TempEps) && FormattedBarcode$dimension == "1"])
+    NumDeadForCurEps <- length(FormattedBarcode$Birth[FormattedBarcode$Death == as.character(TempEps) && FormattedBarcode$dimension == "1"])
+    
+    Result <- c(Result,(NumBornForCurEps+Result[length(Result)])-NumDeadForCurEps)
+    TempEps <- TempEps + epsIncr
+  }
+  
+  return(Result)
+}
 
 ####################################################################
 
@@ -166,12 +190,12 @@ for(i in 1:nrow(dictList)){
   seg = as.numeric(dictList[i,6])
 
   
-  
-  for(j in 1:nrow(inputList)){
+  # change back
+  for(j in 4:nrow(inputList)){
     profile = build_individual_profile(inputList,j,beg,end)
     cloud = build_cloud(profile, cloudDim)
     
-    MaxDist = Maximum_Distance_Between_Points(cloud, cloudDim) * 0.9
+    MaxDist = Maximum_Distance_Between_Points(cloud, cloudDim)[["tempPoint"]] * 0.9
     MaxDIM = 1 # 1 = Loops/holes
     MaxSCA = 100 #  
     
@@ -183,6 +207,10 @@ for(i in 1:nrow(dictList)){
     BarCode <- Diag[[1]]
 
     FormattedBarcode <- FormatBarcode(BarCode)
+    
+    JagLineBetti0 <- JagLineGenerateBetti0(FormattedBarcode,MaxDist)
+    
+    JagLineBetti1 <- JagLineGenerateBetti1(FormattedBarcode,MaxDist)
   }
 }
 
