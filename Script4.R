@@ -134,8 +134,8 @@ FormatBarcode <- function(Barcode){
 JagLineGenerateBetti0 <- function(FormattedBarcode, MaxDist){
   TempEps <- epsIncr
   Result <- c(length(FormattedBarcode$Death[FormattedBarcode$dimension == "0"]))
-  while(TempEps <MaxDist){
-    NumHitsForCurEps <- length(FormattedBarcode$Death[FormattedBarcode$Death == as.character(TempEps) && FormattedBarcode$dimension == "0"])
+  while(TempEps < MaxDist){
+    NumHitsForCurEps <- length(FormattedBarcode$Death[FormattedBarcode$Death == as.character(TempEps) & FormattedBarcode$dimension == "0"])
     Result <- c(Result,Result[length(Result)]-NumHitsForCurEps)
     TempEps <- TempEps + epsIncr
   }
@@ -146,11 +146,15 @@ JagLineGenerateBetti0 <- function(FormattedBarcode, MaxDist){
 JagLineGenerateBetti1 <- function(FormattedBarcode, MaxDist){
   TempEps <- 0
   Result <- c()
-  while(TempEps <MaxDist){
-    NumBornForCurEps <- length(FormattedBarcode$Birth[FormattedBarcode$Birth == as.character(TempEps) && FormattedBarcode$dimension == "1"])
-    NumDeadForCurEps <- length(FormattedBarcode$Birth[FormattedBarcode$Death == as.character(TempEps) && FormattedBarcode$dimension == "1"])
+  while(TempEps < MaxDist){
+    NumBornForCurEps <- length(FormattedBarcode$Birth[FormattedBarcode$Birth == as.character(TempEps) & FormattedBarcode$dimension == "1"])
+    NumDeadForCurEps <- length(FormattedBarcode$Death[FormattedBarcode$Death == as.character(TempEps) & FormattedBarcode$dimension == "1"])
     
-    Result <- c(Result,(NumBornForCurEps+Result[length(Result)])-NumDeadForCurEps)
+    if(length(Result) == 0){
+      Result <- c(0,(NumBornForCurEps+Result[length(Result)])-NumDeadForCurEps)
+    }else{
+      Result <- c(Result,(NumBornForCurEps+Result[length(Result)])-NumDeadForCurEps)
+    }
     TempEps <- TempEps + epsIncr
   }
   
@@ -176,9 +180,9 @@ dictList <- dictList[-1,]
 # Using dimension 2 as window
 cloudDim <- 2
 
-# Result Path
-reasultsPath <- file.path(getwd(),"..","Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology")
-
+# Result Path and directory
+resultsPath <- file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr))
+dir.create(resultsPath,recursive = TRUE,showWarnings = FALSE)
 
 for(i in 1:nrow(dictList)){
   chr = as.numeric(dictList[i,1])
@@ -189,9 +193,16 @@ for(i in 1:nrow(dictList)){
   
   seg = as.numeric(dictList[i,6])
 
+  # Barcode folder
+  dir.create(file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr),as.character(chr)),showWarnings = FALSE)
   
-  # change back
-  for(j in 4:nrow(inputList)){
+  # Jag file
+  JagPathB0 <- file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",str_glue("B0_{cloudDim}D_{dataSet}_{action}_{chr}{arm}_seg{seg}.txt"))
+  JagPathB1 <- file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",str_glue("B1_{cloudDim}D_{dataSet}_{action}_{chr}{arm}_seg{seg}.txt"))
+  file.create(JagPathB0)
+  file.create(JagPathB1)
+  
+  for(j in 1:nrow(inputList)){
     profile = build_individual_profile(inputList,j,beg,end)
     cloud = build_cloud(profile, cloudDim)
     
@@ -205,12 +216,17 @@ for(i in 1:nrow(dictList)){
     
     
     BarCode <- Diag[[1]]
-
+    
+    # Save Barcode
+    file.create(file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr),as.character(chr),str_glue("Inter_{cloudDim}D_hom{homDim}_{dataSet}_{chr}{arm}_pat{j}_seg{seg}.txt")),showWarnings = FALSE)
     FormattedBarcode <- FormatBarcode(BarCode)
+    write.csv(FormattedBarcode,file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr),as.character(chr),str_glue("Inter_{cloudDim}D_hom{homDim}_{dataSet}_{chr}{arm}_pat{j}_seg{seg}.txt")))
     
     JagLineBetti0 <- JagLineGenerateBetti0(FormattedBarcode,MaxDist)
+    write(JagLineBetti0,JagPathB0,append = TRUE)
     
     JagLineBetti1 <- JagLineGenerateBetti1(FormattedBarcode,MaxDist)
+    write(JagLineBetti1,JagPathB1,append = TRUE)
   }
 }
 
