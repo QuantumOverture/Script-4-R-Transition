@@ -52,8 +52,8 @@ return(tCloud)
 
 Maximum_Distance_Between_Points <- function(cloud, cloudDim){
   MaxDist = -1
-  for(Row in 1:(length(cloud)/cloudDim)){
-    for(SecondRow in (Row):(length(cloud)/cloudDim)){
+  for(Row in 1:nrow(cloud)){
+    for(SecondRow in 1:nrow(cloud)){
       if(SecondRow == Row){
         next
       }
@@ -68,7 +68,7 @@ Maximum_Distance_Between_Points <- function(cloud, cloudDim){
     }
   }
   
-  return(MaxDist)
+  return(MaxDist/3)
 }
 
 TruncNum <- function(Float){
@@ -206,7 +206,7 @@ for(i in 1:nrow(dictList)){
     profile = build_individual_profile(inputList,j,beg,end)
     cloud = build_cloud(profile, cloudDim)
     
-    MaxDist = Maximum_Distance_Between_Points(cloud, cloudDim)[["tempPoint"]] * 0.9
+    MaxDist = Maximum_Distance_Between_Points(cloud, cloudDim)[["tempPoint"]]
     MaxDIM = 1 # 1 = Loops/holes
     MaxSCA = 100 #  
     
@@ -229,10 +229,3 @@ for(i in 1:nrow(dictList)){
     write(paste(JagLineBetti1, collapse="\t"),JagPathB1,append = TRUE)
   }
 }
-
-
-
-
-
-
-
