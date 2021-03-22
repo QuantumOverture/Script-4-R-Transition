@@ -220,13 +220,13 @@ for(i in 1:nrow(dictList)){
     # Save Barcode
     file.create(file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr),as.character(chr),str_glue("Inter_{cloudDim}D_hom{homDim}_{dataSet}_{chr}{arm}_pat{j}_seg{seg}.txt")),showWarnings = FALSE)
     FormattedBarcode <- FormatBarcode(BarCode)
-    write.csv(FormattedBarcode,file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr),as.character(chr),str_glue("Inter_{cloudDim}D_hom{homDim}_{dataSet}_{chr}{arm}_pat{j}_seg{seg}.txt")))
+    write.table(FormattedBarcode,file.path(getwd(),"Results",dataSet,action,paste(as.character(cloudDim),"D",sep = ""),"Homology",as.character(epsIncr),as.character(chr),str_glue("Inter_{cloudDim}D_hom{homDim}_{dataSet}_{chr}{arm}_pat{j}_seg{seg}.txt")),sep="\t",col.names = FALSE,row.names = FALSE,quote = FALSE)
     
     JagLineBetti0 <- JagLineGenerateBetti0(FormattedBarcode,MaxDist)
-    write(JagLineBetti0,JagPathB0,append = TRUE)
+    write(paste(JagLineBetti0, collapse="\t"),JagPathB0,append = TRUE)
     
     JagLineBetti1 <- JagLineGenerateBetti1(FormattedBarcode,MaxDist)
-    write(JagLineBetti1,JagPathB1,append = TRUE)
+    write(paste(JagLineBetti1, collapse="\t"),JagPathB1,append = TRUE)
   }
 }
 
